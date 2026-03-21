@@ -12,9 +12,9 @@ export async function createFeedback(params: CreateFeedbackParams) {
   try {
     const formattedTranscript = transcript
       .map(
-        (sentence: { role: string; content: string }) =>
+        (sentence: { role: string; content: string }) =>(
           `- ${sentence.role}: ${sentence.content}\n`
-      )
+      ))
       .join("");
 //done here
     const { object } = await generateObject({
@@ -65,7 +65,10 @@ export async function createFeedback(params: CreateFeedbackParams) {
 }
 
 export async function getInterviewById(id: string): Promise<Interview | null> {
-  const interview = await db.collection("interviews").doc(id).get();
+  const interview = await db
+  .collection("interviews")
+  .doc(id)
+  .get();
 
   return interview.data() as Interview | null;
 }
