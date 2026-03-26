@@ -4,37 +4,63 @@ import { google } from "@ai-sdk/google";
 import { db } from "@/firebase/admin";
 import { getRandomInterviewCover } from "@/lib/utils";
 
+type VapiToolCall = {
+  id: string;
+  type: "function";
+  function: {
+    name: string;
+    arguments: string | Record<string, any>;
+  };
+};
+
 export async function POST(request: Request) {
   try {
     const payload = await request.json();
 
-    // Vapi sends: { message: { type: "tool-calls", toolCallList: [...] } }
-    const toolCall = payload?.message?.toolCallList?.[0];
+    // Expecting Vapi "tool-calls" webhook payload
+    const toolCall: VapiToolCall | undefined = payload?.message?.toolCallList?.[0];
 
-    if (!toolCall) {
+    // If someone hits this endpoint manually (browser/postman) you’ll get this helpful error
+    if (!toolCall?.id) {
       return Response.json(
-        { error: "Missing toolCallList in request payload" },
+        {
+          error: "Invalid Vapi tool-calls payload",
+          expected: {
+            message: { type: "tool-calls", toolCallList: [{ id: "...", function: { arguments: "{...}" } }] },
+          },
+          received: payload,
+        },
         { status: 400 }
       );
     }
 
-    // toolCallId is REQUIRED in the response
-    const toolCallId = toolCall.id || toolCall.toolCallId;
+    const toolCallId = toolCall.id;
 
-    const args =
-      toolCall.function?.arguments ??
-      toolCall.arguments ??
-      toolCall.function?.parameters ??
-      {};
+    // Parse arguments (Vapi usually sends them as a JSON string)
+    let args: any = toolCall.function?.arguments ?? {};
+    if (typeof args === "string") {
+      try {
+        args = JSON.parse(args);
+      } catch (e: any) {
+        return Response.json(
+          {
+            results: [
+              {
+                toolCallId,
+                result: { success: false, message: "Tool arguments were not valid JSON." },
+              },
+            ],
+          },
+          { status: 200 }
+        );
+      }
+    }
 
-    // Sometimes arguments come as a JSON string
-    const parsedArgs = typeof args === "string" ? JSON.parse(args) : args;
-
-    const { type, role, level, techstack, amount, userid } = parsedArgs;
+    const { type, role, level, techstack, amount, userid } = args;
 
     // Validate required fields
     const missing = ["type", "role", "level", "techstack", "amount", "userid"].filter(
-      (k) => parsedArgs?.[k] === undefined || parsedArgs?.[k] === null || parsedArgs?.[k] === ""
+      (k) => args?.[k] === undefined || args?.[k] === null || args?.[k] === ""
     );
 
     if (missing.length) {
@@ -43,7 +69,10 @@ export async function POST(request: Request) {
           results: [
             {
               toolCallId,
-              result: { success: false, message: `Missing fields: ${missing.join(", ")}` },
+              result: {
+                success: false,
+                message: `Missing required fields: ${missing.join(", ")}`,
+              },
             },
           ],
         },
@@ -51,15 +80,18 @@ export async function POST(request: Request) {
       );
     }
 
+    // Strongly force JSON-only output for reliable JSON.parse
     const prompt = `Return ONLY valid JSON. No markdown. No extra text.
 Output must be a JSON array of strings.
+
 Prepare questions for a job interview.
-The job role is ${role}.
-The job experience level is ${level}.
-The tech stack used in the job is: ${techstack}.
-The focus between behavioural and technical questions should lean towards: ${type}.
-The amount of questions required is: ${amount}.
-Do not use slash or asterisk or other special characters.`;
+Role: ${role}
+Experience level: ${level}
+Tech stack: ${techstack}
+Focus: ${type}
+Number of questions: ${amount}
+
+Do not use special characters like slash or asterisk.`;
 
     const { text: questionsRaw } = await generateText({
       model: google("gemini-2.5-flash"),
@@ -70,12 +102,25 @@ Do not use slash or asterisk or other special characters.`;
     try {
       questions = JSON.parse(questionsRaw);
       if (!Array.isArray(questions)) throw new Error("Questions output is not an array");
-    } catch {
-      // fallback: still save something rather than failing silently
-      questions = questionsRaw
-        .split("\n")
-        .map((s) => s.trim())
-        .filter(Boolean);
+      // ensure strings
+      questions = questions.map((q) => String(q));
+    } catch (e: any) {
+      // If Gemini output isn't valid JSON, return a failure to Vapi (so it can retry)
+      return Response.json(
+        {
+          results: [
+            {
+              toolCallId,
+              result: {
+                success: false,
+                message: "Model did not return valid JSON array of questions.",
+                raw: questionsRaw,
+              },
+            },
+          ],
+        },
+        { status: 200 }
+      );
     }
 
     const interview = {
@@ -95,13 +140,16 @@ Do not use slash or asterisk or other special characters.`;
 
     const docRef = await db.collection("interviews").add(interview);
 
-    // ✅ Vapi-expected response shape
+    // ✅ Correct Vapi tool response format
     return Response.json(
       {
         results: [
           {
             toolCallId,
-            result: { success: true, interviewId: docRef.id },
+            result: {
+              success: true,
+              interviewId: docRef.id,
+            },
           },
         ],
       },
@@ -110,10 +158,17 @@ Do not use slash or asterisk or other special characters.`;
   } catch (error: any) {
     console.error("Error in /api/vapi/generate:", error);
 
-    // If we can't read toolCallId, still return a 500
+    // If we don't have a toolCallId due to early failure, return 500
     return Response.json(
-      { error: error?.message ?? "Unknown error", stack: error?.stack },
+      {
+        error: error?.message ?? "Unknown error",
+        stack: error?.stack,
+      },
       { status: 500 }
     );
   }
+}
+
+export async function GET() {
+  return Response.json({ success: true, data: "Thank you!" }, { status: 200 });
 }
