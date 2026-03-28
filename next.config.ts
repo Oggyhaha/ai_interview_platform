@@ -1,9 +1,13 @@
-import type { NextConfig } from "next";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
-const nextConfig: NextConfig = {
-  typescript: {
-    ignoreBuildErrors: true,
+export function middleware(req: NextRequest) {
+  if (req.nextUrl.pathname.startsWith("/api/")) {
+    return NextResponse.next();
   }
-};
+  return NextResponse.next();
+}
 
-export default nextConfig;
+export const config = {
+  matcher: ["/((?!_next|.*\\..*).*)"],
+};
