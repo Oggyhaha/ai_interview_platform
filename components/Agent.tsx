@@ -33,7 +33,7 @@ const Agent = ({
   const [callStatus, setCallStatus] = useState<CallStatus>(CallStatus.INACTIVE);
   const [messages, setMessages] = useState<SavedMessage[]>([]);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [lastMessage, setLastMessage] = useState<string>("");
+  const [latestMessage, setLatestMessage] = useState<string>("");
 
   useEffect(() => {
     const onCallStart = () => {
@@ -84,7 +84,7 @@ const Agent = ({
 
   useEffect(() => {
     if (messages.length > 0) {
-      setLastMessage(messages[messages.length - 1].content);
+      setLatestMessage(messages[messages.length - 1].content);
     }
 
     const handleGenerateFeedback = async (messages: SavedMessage[]) => {
@@ -130,12 +130,12 @@ const Agent = ({
         formattedQuestions = questions
           .map((question) => `- ${question}`)
           .join("\n");
-      } 
+      }
 
       await vapi.start(interviewer, {
         variableValues: {
           questions: formattedQuestions,
-        }  
+        },
       });
     }
   };
@@ -182,13 +182,13 @@ const Agent = ({
         <div className="transcript-border">
           <div className="transcript">
             <p
-              key={lastMessage}
+              key={latestMessage}
               className={cn(
                 "transition-opacity duration-500 opacity-0",
                 "animate-fadeIn opacity-100"
               )}
             >
-              {lastMessage}
+              {latestMessage}
             </p>
           </div>
         </div>
