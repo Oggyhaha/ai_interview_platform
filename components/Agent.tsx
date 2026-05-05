@@ -41,6 +41,7 @@ const Agent = ({
     };
 
     const onCallEnd = () => {
+      console.log("Vapi emitted call-end event");
       setCallStatus(CallStatus.FINISHED);
     };
 
@@ -83,6 +84,12 @@ const Agent = ({
   }, []);
 
   useEffect(() => {
+    const handler = () => console.log("Page is unloading (refresh/nav)");
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, []);
+
+  useEffect(() => {
     if (messages.length > 0) {
       setLatestMessage(messages[messages.length - 1].content);
     }
@@ -113,19 +120,23 @@ const Agent = ({
     };
 
     if (callStatus === CallStatus.FINISHED) {
-      if (type === "generate") {
-        router.push("/");
-      } else {
-        handleGenerateFeedback(messages);
-      }
+      const timeout = setTimeout(() => {
+        if (type === "generate") {
+          router.push("/");
+        } else {
+          handleGenerateFeedback(messages);
+        }
+      }, 1200);
+
+      return () => clearTimeout(timeout);
     }
   }, [messages, callStatus, feedbackId, interviewId, router, type, userId]);
 
   const handleCall = async () => {
     if (!userId) {
-    console.log("userId missing - wait for auth to load");
-    return;
-  }
+      console.log("userId missing - wait for auth to load");
+      return;
+    }
     setCallStatus(CallStatus.CONNECTING);
 
     if (type === "generate") {
@@ -152,6 +163,7 @@ const Agent = ({
   };
 
   const handleDisconnect = () => {
+    console.log("User clicked End -> stopping Vapi");
     setCallStatus(CallStatus.FINISHED);
     vapi.stop();
   };
@@ -207,11 +219,11 @@ const Agent = ({
 
       <div className="w-full flex justify-center">
         {callStatus !== "ACTIVE" ? (
-<button
-  className="relative btn-call"
-  disabled={!userId || callStatus === "CONNECTING"}
-  onClick={handleCall}
->            <span
+          <button
+            className="relative btn-call"
+            disabled={!userId || callStatus === "CONNECTING"}
+            onClick={handleCall}
+          >            <span
               className={cn(
                 "absolute animate-ping rounded-full opacity-75",
                 callStatus !== "CONNECTING" && "hidden"
