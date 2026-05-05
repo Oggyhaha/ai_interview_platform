@@ -5,7 +5,8 @@ import { db } from "@/firebase/admin";
 import { getRandomInterviewCover } from "@/lib/utils";
 
 export async function POST(request: Request) {
-  const { type, role, level, techstack, amount, userid } = await request.json();
+   const body = await request.json();
+  const { type, role, level, techstack, amount, userid, toolCallId } = body;
 
   try {
     const { text: questions } = await generateText({
@@ -39,11 +40,25 @@ export async function POST(request: Request) {
 
     await db.collection("interviews").add(interview);
 
-    return Response.json({ success: true }, { status: 200 });
-  } catch (error) {
+    return Response.json({
+      results: [
+        {
+          toolCallId: toolCallId ?? "missing-toolCallId",
+          result: { success: true },
+        },
+      ],
+    });
+  } catch (error: any) {
     console.error("Error:", error);
-    return Response.json({ success: false, error: error }, { status: 500 });
-  }
+return Response.json({
+      results: [
+        {
+          toolCallId: toolCallId ?? "missing-toolCallId",
+          result: { success: false, error: error?.message ?? String(error) },
+        },
+      ],
+    });
+    }
 }
 
 export async function GET() {

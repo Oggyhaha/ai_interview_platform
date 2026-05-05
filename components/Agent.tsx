@@ -115,6 +115,10 @@ const Agent = ({
   }, [messages, callStatus, feedbackId, interviewId, router, type, userId]);
 
   const handleCall = async () => {
+    if (!userId) {
+    console.log("userId missing - wait for auth to load");
+    return;
+  }
     setCallStatus(CallStatus.CONNECTING);
 
     if (type === "generate") {
@@ -196,8 +200,11 @@ const Agent = ({
 
       <div className="w-full flex justify-center">
         {callStatus !== "ACTIVE" ? (
-          <button className="relative btn-call" onClick={() => handleCall()}>
-            <span
+<button
+  className="relative btn-call"
+  disabled={!userId || callStatus === "CONNECTING"}
+  onClick={handleCall}
+>            <span
               className={cn(
                 "absolute animate-ping rounded-full opacity-75",
                 callStatus !== "CONNECTING" && "hidden"
