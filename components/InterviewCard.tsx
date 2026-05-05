@@ -45,7 +45,7 @@ const InterviewCard =async ({ id, userId, role, type, techstack, createdAt}: Int
                 <div className="flex flex-row justify-between">
                     <DisplayTechIcons techStack={techstack}/>
 
-                    <Button className="btn-primary">
+                    <Button asChild className="btn-primary">
                         <Link href={feedback
                             ? `/interview/${id}/feedback`
                             : `/interview/${id}`

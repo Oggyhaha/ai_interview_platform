@@ -10,8 +10,8 @@
   --color-destructive-100: #f75353;
   --color-destructive-200: #c44141;
 
-  --color-primary-100: #dddfff;
-  --color-primary-200: #cac5fe;
+  --color-primary-100: #FEEFE5;
+  --color-primary-200: #DCC7BE;
 
   --color-light-100: #d6e0ff;
   --color-light-400: #6870a6;
@@ -160,7 +160,7 @@
 
 @layer components {
   .btn-call {
-    @apply inline-block px-7 py-3 font-bold text-sm leading-5 text-white transition-colors duration-150 bg-success-100 border border-transparent rounded-full shadow-sm focus:outline-none focus:shadow-2xl active:bg-success-200 hover:bg-success-200 min-w-28 cursor-pointer items-center justify-center overflow-visible;
+    @apply inline-block px-7 py-3 font-bold text-sm leading-5 text-white transition-all duration-300 bg-success-100 border border-transparent rounded-full shadow-[0_0_15px_var(--color-success-100)] focus:outline-none focus:shadow-[0_0_25px_var(--color-success-100)] active:scale-95 active:translate-y-1 hover:scale-105 hover:bg-success-200 min-w-28 cursor-pointer items-center justify-center overflow-visible;
 
     .span {
       @apply bg-success-100 h-[85%] w-[65%];
@@ -168,17 +168,17 @@
   }
 
   .btn-disconnect {
-    @apply inline-block px-7 py-3 text-sm font-bold leading-5 text-white transition-colors duration-150 bg-destructive-100 border border-transparent rounded-full shadow-sm focus:outline-none focus:shadow-2xl active:bg-destructive-200 hover:bg-destructive-200 min-w-28;
+    @apply inline-block px-7 py-3 text-sm font-bold leading-5 text-white transition-all duration-300 bg-destructive-100 border border-transparent rounded-full shadow-[0_0_15px_var(--color-destructive-100)] focus:outline-none focus:shadow-[0_0_25px_var(--color-destructive-100)] active:scale-95 active:translate-y-1 hover:scale-105 hover:bg-destructive-200 min-w-28;
   }
 
   .btn-upload {
-    @apply flex min-h-14 w-full items-center justify-center gap-1.5 rounded-md;
+    @apply flex min-h-14 w-full items-center justify-center gap-1.5 rounded-md transition-all duration-300 hover:scale-105 active:scale-95;
   }
   .btn-primary {
-    @apply w-fit !bg-primary-200 !text-dark-100 hover:!bg-primary-200/80 !rounded-full !font-bold px-5 cursor-pointer min-h-10;
+    @apply w-fit !bg-primary-200 !text-dark-100 hover:!bg-primary-200/80 !rounded-full !font-bold px-5 cursor-pointer min-h-10 transition-all duration-300 hover:scale-105 hover:shadow-[0_0_20px_var(--color-primary-200)] active:scale-95 active:translate-y-1;
   }
   .btn-secondary {
-    @apply w-fit !bg-dark-200 !text-primary-200 hover:!bg-dark-200/80 !rounded-full !font-bold px-5 cursor-pointer min-h-10;
+    @apply w-fit !bg-dark-200 !text-primary-200 hover:!bg-dark-200/80 !rounded-full !font-bold px-5 cursor-pointer min-h-10 transition-all duration-300 hover:scale-105 hover:shadow-[0_0_15px_var(--color-primary-200)] hover:shadow-primary-200/50 active:scale-95 active:translate-y-1 border border-primary-200/50;
   }
 
   .btn-upload {
@@ -307,11 +307,11 @@
 }
 
 @utility blue-gradient-dark {
-  @apply bg-gradient-to-b from-[#171532] to-[#08090D];
+  @apply bg-gradient-to-b from-[#2a1c17] to-[#08090D];
 }
 
 @utility blue-gradient {
-  @apply bg-gradient-to-l from-[#FFFFFF] to-[#CAC5FE];
+  @apply bg-gradient-to-l from-[#FEEFE5] to-[#DCC7BE];
 }
 
 @utility flex-center {
