@@ -154,11 +154,15 @@ const Agent = ({
           .join("\n");
       }
 
-      await vapi.start(interviewer, {
-        variableValues: {
-          questions: formattedQuestions,
-        },
-      });
+      // Manually inject questions since variableValues is ignored for inline assistant objects
+      const customInterviewer = JSON.parse(JSON.stringify(interviewer));
+      if (customInterviewer.model?.messages?.[0]?.content) {
+        customInterviewer.model.messages[0].content = customInterviewer.model.messages[0].content.replace(
+          "{{questions}}",
+          formattedQuestions
+        );
+      }
+      await vapi.start(customInterviewer);
     }
   };
 

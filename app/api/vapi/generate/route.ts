@@ -47,7 +47,7 @@ export async function POST(request: Request) {
       questions: JSON.parse(questions),
       userId: userid,
       finalized: true,
-      coverImage: getInterviewCover(role || userid),
+      coverImage: getInterviewCover(role || userid || "default"),
       createdAt: new Date().toISOString(),
     };
 
