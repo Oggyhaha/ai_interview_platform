@@ -5,8 +5,21 @@ import { db } from "@/firebase/admin";
 import { getRandomInterviewCover } from "@/lib/utils";
 
 export async function POST(request: Request) {
-   const body = await request.json();
-  const { type, role, level, techstack, amount, userid, toolCallId } = body;
+  const body = await request.json();
+  
+  let args = body;
+  let currentToolCallId = body.toolCallId;
+
+  // Handle Vapi webhook nested structure
+  if (body.message && body.message.type === 'tool-calls') {
+    const toolCall = body.message.toolWithToolCallList?.[0]?.toolCall;
+    if (toolCall) {
+      args = toolCall.function.arguments;
+      currentToolCallId = toolCall.id;
+    }
+  }
+
+  const { type, role, level, techstack, amount, userid } = args;
 
   try {
     const { text: questions } = await generateText({
@@ -43,22 +56,22 @@ export async function POST(request: Request) {
     return Response.json({
       results: [
         {
-          toolCallId: toolCallId ?? "missing-toolCallId",
+          toolCallId: currentToolCallId ?? "missing-toolCallId",
           result: { success: true },
         },
       ],
     });
   } catch (error: any) {
     console.error("Error:", error);
-return Response.json({
+    return Response.json({
       results: [
         {
-          toolCallId: toolCallId ?? "missing-toolCallId",
+          toolCallId: currentToolCallId ?? "missing-toolCallId",
           result: { success: false, error: error?.message ?? String(error) },
         },
       ],
     });
-    }
+  }
 }
 
 export async function GET() {
