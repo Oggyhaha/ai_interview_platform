@@ -3,7 +3,7 @@ import { getCurrentUser } from "@/lib/actions/auth.action";
 import Image from "next/image"
 import Agent from "@/components/Agent";
 import { getInterviewById } from "@/lib/actions/general.action";
-import { getRandomInterviewCover } from "@/lib/utils";
+import { getInterviewCover } from "@/lib/utils";
 import { redirect } from 'next/navigation';
 import React from 'react';
 
@@ -18,7 +18,7 @@ const Page = async ({ params }: RouteParams) => {
             <div className="flex flex-row gap-4 justify-between">
                 <div className="flex flex-row gap-4 items-center max-sm:flex-col">
                     <div className="flex flex-row gap-4 items-center">
-                        <Image src={getRandomInterviewCover()} alt="cover-image" width={40} height={40} className="rounded-full object-cover size-[40px]"/>
+                        <Image src={getInterviewCover(id || interview.role)} alt="cover-image" width={40} height={40} className="rounded-full object-cover size-[40px]"/>
                         <h3 className="capitalize">{interview.role} Interview</h3>
                     </div>
 
