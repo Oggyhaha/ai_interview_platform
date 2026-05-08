@@ -1,4 +1,3 @@
-import dayjs from 'dayjs';
 import {Button} from "@/components/ui/button"
 import Link from "next/link"
 import Image from "next/image"
@@ -6,11 +5,18 @@ import {getInterviewCover} from "@/lib/utils"
 import DisplayTechIcons from './DisplayTechIcons';
 import { getFeedbackByInterviewId } from '@/lib/actions/general.action';
 
-const InterviewCard =async ({ id, userId, role, type, techstack, createdAt}: InterviewCardProps) => {
+// Locale-independent date formatter to prevent hydration mismatches
+function formatDate(dateStr?: string | null): string {
+    const date = new Date(dateStr || '2024-01-01');
+    if (isNaN(date.getTime())) return 'Jan 1, 2024';
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+}
+
+const InterviewCard = async ({ id, userId, role, type, techstack, createdAt}: InterviewCardProps) => {
     const feedback = userId && id ? await getFeedbackByInterviewId({ interviewId: id, userId})
     : null;
     const normalizedType = /mix/gi.test(type) ? 'Mixed' : type;
-    const formattedDate = dayjs(feedback?.createdAt || createdAt || "2024-01-01").format('MMM D, YYYY')
+    const formattedDate = formatDate(feedback?.createdAt || createdAt);
     
     return (
         <div className='card-border w-[360px] max-sm:w-full min-h-96'>

@@ -114,8 +114,21 @@ const Agent = ({
         router.push(`/interview/${interviewId}/feedback`);
       } else {
         console.error("Error saving feedback:", error);
-        alert(`Error saving feedback: ${error}`);
-        router.push("/");
+        const isOverloaded =
+          error?.toLowerCase().includes("overloaded") ||
+          error?.toLowerCase().includes("high demand") ||
+          error?.toLowerCase().includes("try again");
+
+        const message = isOverloaded
+          ? "The AI is experiencing high demand right now. Your interview was saved — click OK to try generating feedback again."
+          : `Could not generate feedback: ${error}`;
+
+        const retry = window.confirm(message);
+        if (retry) {
+          handleGenerateFeedback(messages);
+        } else {
+          router.push("/");
+        }
       }
     };
 
