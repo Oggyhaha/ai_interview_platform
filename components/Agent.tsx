@@ -150,10 +150,27 @@ const Agent = ({
       console.log("userId missing - wait for auth to load");
       return;
     }
+
+    // Guard: catch missing NEXT_PUBLIC env vars (baked in at build time)
+    const vapiToken = process.env.NEXT_PUBLIC_VAPI_WEB_TOKEN;
+    const workflowId = process.env.NEXT_PUBLIC_VAPI_WORKFLOW_ID;
+
+    if (!vapiToken) {
+      console.error("NEXT_PUBLIC_VAPI_WEB_TOKEN is not set!");
+      alert("Configuration error: NEXT_PUBLIC_VAPI_WEB_TOKEN is missing. Add it to Vercel environment variables and redeploy.");
+      return;
+    }
+
     setCallStatus(CallStatus.CONNECTING);
 
     if (type === "generate") {
-      await vapi.start(process.env.NEXT_PUBLIC_VAPI_WORKFLOW_ID!, {
+      if (!workflowId) {
+        console.error("NEXT_PUBLIC_VAPI_WORKFLOW_ID is not set!");
+        alert("Configuration error: NEXT_PUBLIC_VAPI_WORKFLOW_ID is missing. Add it to Vercel environment variables and redeploy.");
+        setCallStatus(CallStatus.INACTIVE);
+        return;
+      }
+      await vapi.start(workflowId, {
         variableValues: {
           username: userName,
           userid: userId,
