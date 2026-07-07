@@ -151,7 +151,7 @@ export const makeGeneratorAssistant = (
   serverUrl: string
 ): CreateAssistantDTO => ({
   name: "PrepYou Setup",
-  firstMessage: `Hello, ${userName}! Let's prepare your interview. I'll ask you a few quick questions and generate one just for you. Are you ready?`,
+  firstMessage: `Hello, ${userName}! I will help you set up your personalised mock interview. Are you ready to begin?`,
   transcriber: {
     provider: "deepgram",
     model: "nova-2",
@@ -168,61 +168,72 @@ export const makeGeneratorAssistant = (
   },
   model: {
     provider: "openai",
-    model: "gpt-3.5-turbo",
+    model: "gpt-4o-mini",
     messages: [
       {
         role: "system",
-        content: `You are an AI mock interview setup assistant for PrepYou.
+        content: `You are an AI interview setup assistant for PrepYou.
 
-PRIMARY GOAL:
-Collect interview settings from the user and then call the generate_interview tool exactly once with all collected fields.
+YOUR ONLY JOB: Collect the following 5 fields from the user, then call the generate_interview tool.
 
-CONVERSATION FLOW:
-- When the user says they are ready, ask: "Great! What job role are you applying for?"
-- Ask for only ONE missing field per turn.
-- Accept multiple fields if offered at once.
+FIELDS TO COLLECT:
+1. role — the job title they are applying for (e.g. "Frontend Developer")
+2. level — exactly one of: Intern, Junior, Mid, Senior
+3. type — exactly one of: Behavioral, Technical, Mixed
+4. techstack — technologies they use, comma-separated (e.g. "React, Node.js, Python")
+5. amount — number of questions, between 3 and 10
 
-FIELDS TO COLLECT (required):
-1. role (job role)
-2. type — must be exactly "Behavioral", "Technical", or "Mixed"
-3. level — must be exactly one of: "Intern", "Junior", "Mid", "Senior"
-4. techstack (comma-separated list of technologies)
-5. amount (a whole number between 1 and 10)
-6. userid — ALWAYS use the value "${userId}" — NEVER ask the user for this.
-
-TOOL USAGE:
-- Once ALL fields are collected, call generate_interview with exactly:
-  { role, type, level, techstack, amount, userid: "${userId}" }
-- Do NOT say the interview is generated until the tool returns success: true.
-- If the tool returns an error, apologize and offer to try again.
-- After confirming success, say: "Your interview has been generated! You can find it on your dashboard. Have a great day!"
-
-STYLE:
-- Friendly, concise, voice-friendly.
-- No special characters that break text-to-speech.`,
+RULES:
+- Ask for ONE field at a time in the order listed above.
+- The userid is already known: "${userId}" — NEVER ask the user for it.
+- Once you have all 5 fields confirmed, immediately call generate_interview.
+- Pass userid as "${userId}" in every tool call — never omit it.
+- If the tool call returns success: true, say: "Perfect! Your interview is ready. Head to your dashboard to start it. Good luck!"
+- If the tool call fails, say: "I'm sorry, something went wrong. Let me try that again." and retry once.
+- Keep all responses short and clear — this is a voice call.`,
       },
     ],
     tools: [
       {
-        type: "function" as any,
-        function: {
-          name: "generate_interview",
-          description: "Generates a mock interview and saves it to the database.",
-          parameters: {
-            type: "object",
-            properties: {
-              role: { type: "string", description: "The job role" },
-              type: { type: "string", enum: ["Behavioral", "Technical", "Mixed"] },
-              level: { type: "string", enum: ["Intern", "Junior", "Mid", "Senior"] },
-              techstack: { type: "string", description: "Comma-separated tech stack" },
-              amount: { type: "number", description: "Number of questions (1-10)" },
-              userid: { type: "string", description: "The user ID" },
+        // Correct Vapi server tool format — fields at TOP LEVEL, not nested under "function"
+        type: "function",
+        name: "generate_interview",
+        description: "Saves a new mock interview to the database. Call this once all fields are confirmed.",
+        parameters: {
+          type: "object",
+          properties: {
+            role: {
+              type: "string",
+              description: "The job role the user is applying for",
             },
-            required: ["role", "type", "level", "techstack", "amount", "userid"],
+            level: {
+              type: "string",
+              enum: ["Intern", "Junior", "Mid", "Senior"],
+              description: "Experience level",
+            },
+            type: {
+              type: "string",
+              enum: ["Behavioral", "Technical", "Mixed"],
+              description: "Type of interview",
+            },
+            techstack: {
+              type: "string",
+              description: "Comma-separated list of technologies",
+            },
+            amount: {
+              type: "number",
+              description: "Number of questions (3-10)",
+            },
+            userid: {
+              type: "string",
+              description: "The user ID — always use the value already provided in the system prompt",
+            },
           },
+          required: ["role", "level", "type", "techstack", "amount", "userid"],
         },
         server: {
           url: `${serverUrl}/api/vapi/generate`,
+          timeoutSeconds: 45,
         },
       } as any,
     ],

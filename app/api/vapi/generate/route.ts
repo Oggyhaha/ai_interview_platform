@@ -13,17 +13,80 @@ function parseTechstack(techstack: string | string[]): string[] {
 // Safely parse questions JSON — strips markdown fences if present
 function parseQuestions(raw: string): string[] {
   try {
-    // Strip markdown code fences if the model wraps the JSON
     const cleaned = raw.replace(/```(?:json)?\n?/gi, "").trim();
     const parsed = JSON.parse(cleaned);
     if (Array.isArray(parsed)) return parsed;
   } catch {
-    // Fallback: extract quoted strings
     const matches = raw.match(/"([^"]+)"/g);
     if (matches) return matches.map((m) => m.replace(/^"|"$/g, ""));
   }
-  return [raw]; // last resort: return raw as single question
+  return [raw];
 }
+
+// ─── Extract args + toolCallId from ALL known Vapi body shapes ────────────────
+function extractFromBody(body: any): { args: any; toolCallId: string } {
+  let args: any = null;
+  let toolCallId = "missing-id";
+
+  console.log("[vapi/generate] Body keys:", Object.keys(body || {}));
+  console.log("[vapi/generate] body.message?.type:", body?.message?.type);
+
+  // ── Shape 1: Vapi server webhook — message.type === "tool-calls" ──────────
+  if (body?.message?.type === "tool-calls") {
+    // Newer: toolCallList[]
+    const tc1 = body.message.toolCallList?.[0];
+    // Older: toolWithToolCallList[]
+    const tc2 = body.message.toolWithToolCallList?.[0]?.toolCall;
+
+    const tc = tc1 || tc2;
+    if (tc) {
+      toolCallId = tc.id || toolCallId;
+      args =
+        typeof tc.function?.arguments === "string"
+          ? JSON.parse(tc.function.arguments)
+          : tc.function?.arguments ?? tc.arguments ?? null;
+      console.log("[vapi/generate] Shape 1 (tool-calls) args:", args, "tcId:", toolCallId);
+      return { args, toolCallId };
+    }
+  }
+
+  // ── Shape 2: Vapi inline function tool call (no message wrapper) ──────────
+  // Body is directly: { id, type, function: { name, arguments } }
+  if (body?.function?.name === "generate_interview") {
+    toolCallId = body.id || toolCallId;
+    args =
+      typeof body.function.arguments === "string"
+        ? JSON.parse(body.function.arguments)
+        : body.function.arguments;
+    console.log("[vapi/generate] Shape 2 (inline function) args:", args, "tcId:", toolCallId);
+    return { args, toolCallId };
+  }
+
+  // ── Shape 3: Flat direct POST (testing / manual) ──────────────────────────
+  // Body is: { role, type, level, techstack, amount, userid }
+  if (body?.role && body?.userid) {
+    args = body;
+    toolCallId = body.toolCallId || toolCallId;
+    console.log("[vapi/generate] Shape 3 (flat direct) args:", args);
+    return { args, toolCallId };
+  }
+
+  // ── Shape 4: Nested under results / data (some Vapi versions) ─────────────
+  const nested = body?.data || body?.payload || body?.toolCall;
+  if (nested) {
+    args =
+      typeof nested.function?.arguments === "string"
+        ? JSON.parse(nested.function.arguments)
+        : nested.function?.arguments ?? nested;
+    toolCallId = nested.id || toolCallId;
+    console.log("[vapi/generate] Shape 4 (nested) args:", args);
+    return { args, toolCallId };
+  }
+
+  console.warn("[vapi/generate] Could not extract args — full body:", JSON.stringify(body, null, 2));
+  return { args: body, toolCallId };
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 export async function POST(request: Request) {
   let body: any;
@@ -33,71 +96,44 @@ export async function POST(request: Request) {
     return Response.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  console.log("[/api/vapi/generate] Raw body:", JSON.stringify(body, null, 2));
+  console.log("[vapi/generate] ── INCOMING REQUEST ──────────────────────");
+  console.log("[vapi/generate] Full body:", JSON.stringify(body, null, 2));
 
-  // -------------------------------------------------------
-  // Extract args + toolCallId from all known Vapi formats
-  // -------------------------------------------------------
-  let args: any = null;
-  let currentToolCallId: string | undefined;
+  const { args, toolCallId } = extractFromBody(body);
 
-  // Format 1: Vapi server-tool webhook — body.message.type === "tool-calls"
-  if (body?.message?.type === "tool-calls") {
-    // toolWithToolCallList (older format)
-    const toolCall1 = body.message.toolWithToolCallList?.[0]?.toolCall;
-    // toolCallList (newer format)
-    const toolCall2 = body.message.toolCallList?.[0];
-
-    const toolCall = toolCall1 || toolCall2;
-    if (toolCall) {
-      args =
-        typeof toolCall.function?.arguments === "string"
-          ? JSON.parse(toolCall.function.arguments)
-          : toolCall.function?.arguments;
-      currentToolCallId = toolCall.id;
-    }
-  }
-
-  // Format 2: Direct POST (HTTPie testing / manual calls)
-  if (!args) {
-    args = body;
-    currentToolCallId = body.toolCallId;
-  }
-
-  console.log("[/api/vapi/generate] Extracted args:", args);
-  console.log("[/api/vapi/generate] toolCallId:", currentToolCallId);
+  console.log("[vapi/generate] Final args:", JSON.stringify(args));
+  console.log("[vapi/generate] toolCallId:", toolCallId);
 
   const { type, role, level, techstack, amount, userid } = args ?? {};
 
-  // Validate required fields
-  if (!role || !type || !level || !techstack || !amount || !userid) {
-    console.error("[/api/vapi/generate] Missing required fields:", {
-      role, type, level, techstack, amount, userid,
-    });
+  // ── Validate ──────────────────────────────────────────────────────────────
+  const missing = [
+    !role && "role",
+    !type && "type",
+    !level && "level",
+    !techstack && "techstack",
+    !amount && "amount",
+    !userid && "userid",
+  ].filter(Boolean);
+
+  if (missing.length > 0) {
+    console.error("[vapi/generate] Missing fields:", missing);
     return Response.json({
       results: [
         {
-          toolCallId: currentToolCallId ?? "missing-toolCallId",
+          toolCallId,
           result: {
             success: false,
-            error: `Missing required fields: ${[
-              !role && "role",
-              !type && "type",
-              !level && "level",
-              !techstack && "techstack",
-              !amount && "amount",
-              !userid && "userid",
-            ]
-              .filter(Boolean)
-              .join(", ")}`,
+            error: `Missing required fields: ${missing.join(", ")}`,
           },
         },
       ],
     });
   }
 
+  // ── Generate questions ────────────────────────────────────────────────────
   try {
-    console.log("[/api/vapi/generate] Generating questions for role:", role);
+    console.log("[vapi/generate] Generating questions for:", { role, type, level, techstack, amount, userid });
 
     const { text: rawQuestions } = await generateText({
       model: google("gemini-2.5-flash-lite"),
@@ -112,12 +148,12 @@ Format: ["Question 1", "Question 2", "Question 3"]
 The questions will be read by a voice assistant so avoid special characters like / * [ ] that break TTS.`,
     });
 
-    console.log("[/api/vapi/generate] Raw questions text:", rawQuestions);
+    console.log("[vapi/generate] Raw questions:", rawQuestions);
 
     const parsedQuestions = parseQuestions(rawQuestions);
     const parsedTechstack = parseTechstack(techstack);
 
-    console.log("[/api/vapi/generate] Parsed questions count:", parsedQuestions.length);
+    console.log("[vapi/generate] Parsed question count:", parsedQuestions.length);
 
     const interview = {
       role,
@@ -131,27 +167,30 @@ The questions will be read by a voice assistant so avoid special characters like
       createdAt: new Date().toISOString(),
     };
 
-    console.log("[/api/vapi/generate] Saving interview to Firestore for userId:", userid);
+    console.log("[vapi/generate] Saving to Firestore, userId:", userid);
 
     const docRef = await db.collection("interviews").add(interview);
 
-    console.log("[/api/vapi/generate] Interview saved! Doc ID:", docRef.id);
+    console.log("[vapi/generate] ✓ Saved! interviewId:", docRef.id);
 
     return Response.json({
       results: [
         {
-          toolCallId: currentToolCallId ?? "missing-toolCallId",
+          toolCallId,
           result: { success: true, interviewId: docRef.id },
         },
       ],
     });
   } catch (error: any) {
-    console.error("[/api/vapi/generate] Error:", error);
+    console.error("[vapi/generate] ✗ Error:", error?.message, error);
     return Response.json({
       results: [
         {
-          toolCallId: currentToolCallId ?? "missing-toolCallId",
-          result: { success: false, error: error?.message ?? String(error) },
+          toolCallId,
+          result: {
+            success: false,
+            error: error?.message ?? String(error),
+          },
         },
       ],
     });
@@ -159,5 +198,5 @@ The questions will be read by a voice assistant so avoid special characters like
 }
 
 export async function GET() {
-  return Response.json({ success: true, data: "Thank you!" }, { status: 200 });
+  return Response.json({ success: true, data: "PrepYou generate endpoint is live." }, { status: 200 });
 }
