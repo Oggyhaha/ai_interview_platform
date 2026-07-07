@@ -232,23 +232,46 @@ const Agent = ({
       return;
     }
 
+    // Check microphone before starting
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      diag("Mic access granted ✓", { tracks: stream.getTracks().length });
+      // Monitor track lifecycle
+      stream.getTracks().forEach((track) => {
+        track.onended = () => {
+          diag("⚠️ Mic track ENDED — this kills the call!", { trackId: track.id });
+          callDropReason.current = "mic track ended";
+        };
+      });
+      // Release the test stream (Vapi will open its own)
+      stream.getTracks().forEach((t) => t.stop());
+    } catch (err: any) {
+      diag("Mic access DENIED — call will fail", err?.message);
+      alert(`Microphone access denied: ${err?.message}\n\nPlease allow microphone access and try again.`);
+      return;
+    }
 
     setCallStatus(CallStatus.CONNECTING);
 
     try {
       if (type === "generate") {
-        if (!workflowId) {
-          alert("Configuration error: NEXT_PUBLIC_VAPI_WORKFLOW_ID is missing. Add it to Vercel env vars and redeploy.");
-          setCallStatus(CallStatus.INACTIVE);
-          return;
+        // Use inline assistant instead of Vapi Workflow to avoid Daily.co ejection issues.
+        // The inline assistant has a built-in server tool that calls our own API.
+        let baseUrl =
+          process.env.NEXT_PUBLIC_APP_URL ||
+          (typeof window !== "undefined" ? window.location.origin : "");
+
+        // If running locally, route Vapi's call to the public Vercel production deployment
+        // so Vapi's servers can reach it. Both share the same Firebase db, so it syncs instantly!
+        if (baseUrl.includes("localhost") || baseUrl.includes("127.0.0.1")) {
+          baseUrl = "https://ai-interview-platform-murex.vercel.app";
+          diag("Localhost detected: Routing Vapi tool calls to production URL", { baseUrl });
         }
-        diag("Starting Vapi WORKFLOW", { workflowId });
-        await vapi.start(workflowId, {
-          variableValues: {
-            username: userName,
-            userid: userId,
-          },
-        });
+
+        diag("Starting Vapi INLINE GENERATOR assistant", { baseUrl });
+
+        const generatorAssistant = makeGeneratorAssistant(userName, userId, baseUrl);
+        await vapi.start(generatorAssistant);
       } else {
         let formattedQuestions = "";
         if (questions) {
