@@ -124,9 +124,12 @@ Please score the candidate from 0 to 100 in the following areas. Do not add cate
 }
 
 export async function getInterviewById(id: string): Promise<Interview | null> {
-  const doc = await db.collection("interviews").doc(id).get();
-  if (!doc.exists) return null;
-  return { id: doc.id, ...doc.data() } as Interview;
+  const interview = await db
+  .collection("interviews")
+  .doc(id)
+  .get();
+
+  return interview.data() as Interview | null;
 }
 
 export async function getFeedbackByInterviewId(
@@ -152,7 +155,7 @@ export async function getFeedbackByInterviewId(
 export async function getLatestInterviews(
   params: GetLatestInterviewsParams
 ): Promise<Interview[] | null> {
-  const { userId, limit = 6 } = params; // limit to 6 for home page performance
+  const { userId, limit = 20 } = params;
 
   let query = db
     .collection("interviews")
@@ -169,8 +172,6 @@ export async function getLatestInterviews(
   return interviews.docs.map((doc) => ({
     id: doc.id,
     ...doc.data(),
-    // Strip heavy questions array — not needed on home page cards
-    questions: undefined,
   })) as Interview[];
 }
 
@@ -183,12 +184,10 @@ export async function getInterviewsByUserId(
     .collection("interviews")
     .where("userId", "==", userId)
     .orderBy("createdAt", "desc")
-    .limit(10) // cap at 10 for home page
     .get();
 
   return interviews.docs.map((doc) => ({
     id: doc.id,
     ...doc.data(),
-    questions: undefined, // strip heavy array from list view
   })) as Interview[];
 }

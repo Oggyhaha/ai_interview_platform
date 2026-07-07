@@ -12,14 +12,14 @@ const RootLayout = async ({ children }: { children: ReactNode}) => {
     
     return (
         <div className="root-layout">
-        <nav className="flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-2.5 group">
-                <Image src="/logo.svg" alt="PrepYou logo" width={36} height={36} className="transition-transform duration-200 group-hover:scale-110"/>
-                <h2 className="logo-text">PrepYou</h2>
-            </Link>
-        </nav>
-        {children}
-    </div>
+            <nav>
+                <Link href="/" className="flex items-center gap-2">
+                    <Image src="/logo.svg" alt="logo" width={38} height={32}/>
+                    <h2 className="logo-text">PrepWise</h2>
+                </Link>
+            </nav>
+            {children}
+        </div>
     )
 }
 
