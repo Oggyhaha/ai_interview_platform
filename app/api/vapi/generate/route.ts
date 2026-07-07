@@ -69,12 +69,13 @@ export async function POST(request: Request) {
   console.log("[/api/vapi/generate] Extracted args:", args);
   console.log("[/api/vapi/generate] toolCallId:", currentToolCallId);
 
-  const { type, role, level, techstack, amount, userid } = args ?? {};
+  const { type, role, level, techstack, amount, userid, userId } = args ?? {};
+  const activeUserId = userid || userId;
 
   // Validate required fields
-  if (!role || !type || !level || !techstack || !amount || !userid) {
+  if (!role || !type || !level || !techstack || !amount || !activeUserId) {
     console.error("[/api/vapi/generate] Missing required fields:", {
-      role, type, level, techstack, amount, userid,
+      role, type, level, techstack, amount, userid: activeUserId,
     });
     return Response.json({
       results: [
@@ -88,7 +89,7 @@ export async function POST(request: Request) {
               !level && "level",
               !techstack && "techstack",
               !amount && "amount",
-              !userid && "userid",
+              !activeUserId && "userid",
             ]
               .filter(Boolean)
               .join(", ")}`,
@@ -127,13 +128,13 @@ The questions will be read by a voice assistant so avoid special characters like
       level,
       techstack: parsedTechstack,
       questions: parsedQuestions,
-      userId: userid,
+      userId: activeUserId,
       finalized: true,
-      coverImage: getInterviewCover(role || userid || "default"),
+      coverImage: getInterviewCover(role || activeUserId || "default"),
       createdAt: new Date().toISOString(),
     };
 
-    console.log("[/api/vapi/generate] Saving interview to Firestore for userId:", userid);
+    console.log("[/api/vapi/generate] Saving interview to Firestore for userId:", activeUserId);
 
     const docRef = await db.collection("interviews").add(interview);
 
