@@ -142,6 +142,94 @@ STYLE:
   },
 };
 
+// Generator assistant — used for the interview setup flow.
+// This is an INLINE assistant (not a Vapi Workflow) so it is immune
+// to Workflow misconfiguration / Daily.co ejection issues.
+export const makeGeneratorAssistant = (
+  userName: string,
+  userId: string,
+  serverUrl: string
+): CreateAssistantDTO => ({
+  name: "PrepYou Setup",
+  firstMessage: `Hello, ${userName}! Let's prepare your interview. I'll ask you a few quick questions and generate one just for you. Are you ready?`,
+  transcriber: {
+    provider: "deepgram",
+    model: "nova-2",
+    language: "en",
+  },
+  voice: {
+    provider: "11labs",
+    voiceId: "sarah",
+    stability: 0.4,
+    similarityBoost: 0.8,
+    speed: 0.9,
+    style: 0.5,
+    useSpeakerBoost: true,
+  },
+  model: {
+    provider: "openai",
+    model: "gpt-3.5-turbo",
+    messages: [
+      {
+        role: "system",
+        content: `You are an AI mock interview setup assistant for PrepYou.
+
+PRIMARY GOAL:
+Collect interview settings from the user and then call the generate_interview tool exactly once with all collected fields.
+
+CONVERSATION FLOW:
+- When the user says they are ready, ask: "Great! What job role are you applying for?"
+- Ask for only ONE missing field per turn.
+- Accept multiple fields if offered at once.
+
+FIELDS TO COLLECT (required):
+1. role (job role)
+2. type — must be exactly "Behavioral", "Technical", or "Mixed"
+3. level — must be exactly one of: "Intern", "Junior", "Mid", "Senior"
+4. techstack (comma-separated list of technologies)
+5. amount (a whole number between 1 and 10)
+6. userid — ALWAYS use the value "${userId}" — NEVER ask the user for this.
+
+TOOL USAGE:
+- Once ALL fields are collected, call generate_interview with exactly:
+  { role, type, level, techstack, amount, userid: "${userId}" }
+- Do NOT say the interview is generated until the tool returns success: true.
+- If the tool returns an error, apologize and offer to try again.
+- After confirming success, say: "Your interview has been generated! You can find it on your dashboard. Have a great day!"
+
+STYLE:
+- Friendly, concise, voice-friendly.
+- No special characters that break text-to-speech.`,
+      },
+    ],
+    tools: [
+      {
+        type: "function" as any,
+        function: {
+          name: "generate_interview",
+          description: "Generates a mock interview and saves it to the database.",
+          parameters: {
+            type: "object",
+            properties: {
+              role: { type: "string", description: "The job role" },
+              type: { type: "string", enum: ["Behavioral", "Technical", "Mixed"] },
+              level: { type: "string", enum: ["Intern", "Junior", "Mid", "Senior"] },
+              techstack: { type: "string", description: "Comma-separated tech stack" },
+              amount: { type: "number", description: "Number of questions (1-10)" },
+              userid: { type: "string", description: "The user ID" },
+            },
+            required: ["role", "type", "level", "techstack", "amount", "userid"],
+          },
+        },
+        server: {
+          url: `${serverUrl}/api/vapi/generate`,
+        },
+      } as any,
+    ],
+  },
+});
+
+
 export const feedbackSchema = z.object({
   totalScore: z.number(),
   categoryScores: z.array(
