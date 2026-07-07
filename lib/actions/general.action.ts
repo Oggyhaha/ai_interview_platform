@@ -8,9 +8,9 @@ import { feedbackSchema } from "@/constants";
 
 // Models to try in order if previous one is overloaded
 const FALLBACK_MODELS = [
-  "gemini-2.5-flash-lite",   // primary — fastest + cheapest
-  "gemini-2.5-flash",        // fallback 1
-  "gemini-1.5-flash",        // fallback 2
+  "gemini-2.5-flash",
+  "gemini-1.5-flash",
+  "gemini-1.5-pro",
 ];
 
 // Returns true if the error is a transient overload/rate-limit that warrants a retry

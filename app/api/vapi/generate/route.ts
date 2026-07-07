@@ -47,10 +47,8 @@ export async function POST(request: Request) {
     const toolCall1 = body.message.toolWithToolCallList?.[0]?.toolCall;
     // toolCallList (newer format)
     const toolCall2 = body.message.toolCallList?.[0];
-    // toolCalls (alternative format)
-    const toolCall3 = body.message.toolCalls?.[0];
 
-    const toolCall = toolCall1 || toolCall2 || toolCall3;
+    const toolCall = toolCall1 || toolCall2;
     if (toolCall) {
       args =
         typeof toolCall.function?.arguments === "string"
@@ -69,13 +67,12 @@ export async function POST(request: Request) {
   console.log("[/api/vapi/generate] Extracted args:", args);
   console.log("[/api/vapi/generate] toolCallId:", currentToolCallId);
 
-  const { type, role, level, techstack, amount, userid, userId } = args ?? {};
-  const activeUserId = userid || userId;
+  const { type, role, level, techstack, amount, userid } = args ?? {};
 
   // Validate required fields
-  if (!role || !type || !level || !techstack || !amount || !activeUserId) {
+  if (!role || !type || !level || !techstack || !amount || !userid) {
     console.error("[/api/vapi/generate] Missing required fields:", {
-      role, type, level, techstack, amount, userid: activeUserId,
+      role, type, level, techstack, amount, userid,
     });
     return Response.json({
       results: [
@@ -89,7 +86,7 @@ export async function POST(request: Request) {
               !level && "level",
               !techstack && "techstack",
               !amount && "amount",
-              !activeUserId && "userid",
+              !userid && "userid",
             ]
               .filter(Boolean)
               .join(", ")}`,
@@ -103,7 +100,7 @@ export async function POST(request: Request) {
     console.log("[/api/vapi/generate] Generating questions for role:", role);
 
     const { text: rawQuestions } = await generateText({
-      model: google("gemini-2.5-flash-lite"),
+      model: google("gemini-2.5-flash"),
       prompt: `Prepare questions for a job interview.
 The job role is ${role}.
 The job experience level is ${level}.
@@ -128,13 +125,13 @@ The questions will be read by a voice assistant so avoid special characters like
       level,
       techstack: parsedTechstack,
       questions: parsedQuestions,
-      userId: activeUserId,
+      userId: userid,
       finalized: true,
-      coverImage: getInterviewCover(role || activeUserId || "default"),
+      coverImage: getInterviewCover(role || userid || "default"),
       createdAt: new Date().toISOString(),
     };
 
-    console.log("[/api/vapi/generate] Saving interview to Firestore for userId:", activeUserId);
+    console.log("[/api/vapi/generate] Saving interview to Firestore for userId:", userid);
 
     const docRef = await db.collection("interviews").add(interview);
 
