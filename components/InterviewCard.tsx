@@ -22,11 +22,11 @@ const InterviewCard = async ({ id, userId, role, type, techstack, createdAt}: In
         <div className='card-border w-[360px] max-sm:w-full min-h-96'>
             <div className="card-interview">
                 <div>
-                    <div className="absolute top-0 right-0 w-fit px-4 py-2 rounded-bl-lg bg-light-600">
-                        <p className="badge-text">{normalizedType}</p>
+                    <div className="absolute top-4 right-4">
+                        <span className="badge-text">{normalizedType}</span>
                     </div>
 
-                    <Image src={getInterviewCover(id || role)} alt="cover image" width={90} height={90} className="rounded-full object-fit size-[90px]"/>
+                    <Image src={getInterviewCover(id || role)} alt="cover image" width={90} height={90} className="rounded-full object-cover size-[90px] border-4 border-stone-50 shadow-sm"/>
                     <h3 className="mt-5 capitalize">
                         {role} Interview
                     </h3>
