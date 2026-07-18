@@ -100,7 +100,7 @@ export async function POST(request: Request) {
     console.log("[/api/vapi/generate] Generating questions for role:", role);
 
     const { text: rawQuestions } = await generateText({
-      model: google("Gemini 2.5 Flash Lite"),
+      model: google("gemini-2.5-flash-lite"),
       prompt: `Prepare questions for a job interview.
 The job role is ${role}.
 The job experience level is ${level}.
