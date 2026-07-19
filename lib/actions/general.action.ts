@@ -1,15 +1,6 @@
 "use server";
 
-import { generateObject } from "ai";
-import { createGroq } from "@ai-sdk/groq";
-
 import { db } from "@/firebase/admin";
-import { feedbackSchema } from "@/constants";
-
-// Instantiate custom Groq client using the user's custom environment variable
-const groq = createGroq({
-  apiKey: process.env.QROQ_AI_API_KEY,
-});
 
 // Groq models to try in order of capability & availability
 const FALLBACK_MODELS = [
@@ -35,27 +26,76 @@ function isOverloadError(error: any): boolean {
 // Sleep helper
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-// Tries to generate feedback using a cascade of Groq models with retries
+// Tries to generate feedback using a cascade of Groq models with retries via direct fetch
 async function generateFeedbackWithFallback(prompt: string, system: string) {
   let lastError: any = null;
+
   for (const modelId of FALLBACK_MODELS) {
     const maxRetries = 2;
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
-        console.log(`[createFeedback] Trying Groq model: ${modelId}, attempt: ${attempt + 1}`);
-        const result = await generateObject({
-          model: groq(modelId),
-          schema: feedbackSchema,
-          prompt,
-          system,
+        console.log(`[createFeedback] Trying Groq model (direct fetch): ${modelId}, attempt: ${attempt + 1}`);
+
+        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${process.env.QROQ_AI_API_KEY}`,
+          },
+          body: JSON.stringify({
+            model: modelId,
+            response_format: { type: "json_object" },
+            messages: [
+              {
+                role: "system",
+                content: `${system}\nYou MUST return a JSON object with the following schema:
+{
+  "totalScore": number (0-100),
+  "categoryScores": [
+    {
+      "name": "Communication Skills" | "Technical Knowledge" | "Problem Solving" | "Cultural Fit" | "Confidence and Clarity",
+      "score": number (0-100),
+      "comment": "string explanation"
+    }
+  ], // Array of exactly 5 category scores
+  "strengths": ["string"],
+  "areasForImprovement": ["string"],
+  "finalAssessment": "detailed string paragraph summarizing performance"
+}`
+              },
+              { role: "user", content: prompt }
+            ],
+            temperature: 0.2,
+          }),
         });
+
+        if (!response.ok) {
+          const errText = await response.text();
+          throw new Error(`HTTP error ${response.status}: ${errText}`);
+        }
+
+        const data = await response.json();
+        const content = data.choices?.[0]?.message?.content;
+
+        if (!content) {
+          throw new Error("Empty response content from Groq");
+        }
+
+        console.log(`[createFeedback] Raw content received:`, content);
+        const parsed = JSON.parse(content);
+
+        // Basic validation of fields
+        if (typeof parsed.totalScore !== "number" || !Array.isArray(parsed.categoryScores)) {
+          throw new Error("Parsed JSON does not match required schema fields");
+        }
+
         console.log(`[createFeedback] Success with Groq model: ${modelId}`);
-        return result;
+        return { object: parsed };
       } catch (error: any) {
         lastError = error;
         console.error(`[createFeedback] Groq Model ${modelId} attempt ${attempt + 1} failed:`, error);
+        
         if (isOverloadError(error) && attempt < maxRetries) {
-          // Exponential backoff: 2s, 4s
           const wait = 2000 * Math.pow(2, attempt);
           console.log(`[createFeedback] Overloaded, waiting ${wait}ms before retry...`);
           await sleep(wait);
