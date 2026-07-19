@@ -1,16 +1,21 @@
 "use server";
 
 import { generateObject } from "ai";
-import { google } from "@ai-sdk/google";
+import { createGroq } from "@ai-sdk/groq";
 
 import { db } from "@/firebase/admin";
 import { feedbackSchema } from "@/constants";
 
-// Models to try in order if previous one is overloaded
+// Instantiate custom Groq client using the user's custom environment variable
+const groq = createGroq({
+  apiKey: process.env.QROQ_AI_API_KEY,
+});
+
+// Groq models to try in order of capability & availability
 const FALLBACK_MODELS = [
-  "gemini-2.5-flash",
-  "gemini-1.5-flash",
-  "gemini-1.5-pro",
+  "llama-3.3-70b-versatile",
+  "llama-3.1-70b-versatile",
+  "mixtral-8x7b-32768",
 ];
 
 // Returns true if the error is a transient overload/rate-limit that warrants a retry
@@ -30,23 +35,23 @@ function isOverloadError(error: any): boolean {
 // Sleep helper
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-// Tries to generate feedback using a cascade of models with retries
+// Tries to generate feedback using a cascade of Groq models with retries
 async function generateFeedbackWithFallback(prompt: string, system: string) {
   for (const modelId of FALLBACK_MODELS) {
     const maxRetries = 2;
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
-        console.log(`[createFeedback] Trying model: ${modelId}, attempt: ${attempt + 1}`);
+        console.log(`[createFeedback] Trying Groq model: ${modelId}, attempt: ${attempt + 1}`);
         const result = await generateObject({
-          model: google(modelId),
+          model: groq(modelId),
           schema: feedbackSchema,
           prompt,
           system,
         });
-        console.log(`[createFeedback] Success with model: ${modelId}`);
+        console.log(`[createFeedback] Success with Groq model: ${modelId}`);
         return result;
       } catch (error: any) {
-        console.error(`[createFeedback] Model ${modelId} attempt ${attempt + 1} failed:`, error?.message);
+        console.error(`[createFeedback] Groq Model ${modelId} attempt ${attempt + 1} failed:`, error?.message);
         if (isOverloadError(error) && attempt < maxRetries) {
           // Exponential backoff: 2s, 4s
           const wait = 2000 * Math.pow(2, attempt);
@@ -59,7 +64,7 @@ async function generateFeedbackWithFallback(prompt: string, system: string) {
       }
     }
   }
-  throw new Error("All AI models are currently overloaded. Please try again in a minute.");
+  throw new Error("All Groq AI models are currently overloaded. Please try again in a minute.");
 }
 
 export async function createFeedback(params: CreateFeedbackParams) {

@@ -1,6 +1,3 @@
-import { generateText } from "ai";
-import { google } from "@ai-sdk/google";
-
 import { db } from "@/firebase/admin";
 import { getInterviewCover } from "@/lib/utils";
 
@@ -99,9 +96,18 @@ export async function POST(request: Request) {
   try {
     console.log("[/api/vapi/generate] Generating questions for role:", role);
 
-    const { text: rawQuestions } = await generateText({
-      model: google("gemini-2.5-flash-lite"),
-      prompt: `Prepare questions for a job interview.
+    const groqResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${process.env.QROQ_AI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: "llama-3.3-70b-versatile",
+        messages: [
+          {
+            role: "user",
+            content: `Prepare questions for a job interview.
 The job role is ${role}.
 The job experience level is ${level}.
 The tech stack used in the job is: ${Array.isArray(techstack) ? techstack.join(", ") : techstack}.
@@ -110,7 +116,14 @@ The amount of questions required is: ${amount}.
 Please return ONLY a valid JSON array of question strings, no markdown, no extra text.
 Format: ["Question 1", "Question 2", "Question 3"]
 The questions will be read by a voice assistant so avoid special characters like / * [ ] that break TTS.`,
+          },
+        ],
+        temperature: 0.7,
+      }),
     });
+
+    const groqData = await groqResponse.json();
+    const rawQuestions = groqData.choices?.[0]?.message?.content ?? "";
 
     console.log("[/api/vapi/generate] Raw questions text:", rawQuestions);
 
