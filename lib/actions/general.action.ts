@@ -37,6 +37,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 // Tries to generate feedback using a cascade of Groq models with retries
 async function generateFeedbackWithFallback(prompt: string, system: string) {
+  let lastError: any = null;
   for (const modelId of FALLBACK_MODELS) {
     const maxRetries = 2;
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -51,7 +52,8 @@ async function generateFeedbackWithFallback(prompt: string, system: string) {
         console.log(`[createFeedback] Success with Groq model: ${modelId}`);
         return result;
       } catch (error: any) {
-        console.error(`[createFeedback] Groq Model ${modelId} attempt ${attempt + 1} failed:`, error?.message);
+        lastError = error;
+        console.error(`[createFeedback] Groq Model ${modelId} attempt ${attempt + 1} failed:`, error);
         if (isOverloadError(error) && attempt < maxRetries) {
           // Exponential backoff: 2s, 4s
           const wait = 2000 * Math.pow(2, attempt);
@@ -64,7 +66,7 @@ async function generateFeedbackWithFallback(prompt: string, system: string) {
       }
     }
   }
-  throw new Error("All Groq AI models are currently overloaded. Please try again in a minute.");
+  throw new Error(`Groq AI feedback generation failed. Last error: ${lastError?.message || String(lastError)}`);
 }
 
 export async function createFeedback(params: CreateFeedbackParams) {
