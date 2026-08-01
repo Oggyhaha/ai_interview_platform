@@ -1,3 +1,11 @@
+interface QuestionEvaluation {
+  question: string;
+  candidateAnswer: string;
+  score: number;
+  modelAnswer: string;
+  suggestion: string;
+}
+
 interface Feedback {
   id: string;
   interviewId: string;
@@ -10,7 +18,20 @@ interface Feedback {
   strengths: string[];
   areasForImprovement: string[];
   finalAssessment: string;
+  questionEvaluations?: QuestionEvaluation[];
   createdAt: string;
+}
+
+export type InterviewerPersonaId = "supportive" | "faang" | "startup";
+
+export interface InterviewerPersona {
+  id: InterviewerPersonaId;
+  name: string;
+  title: string;
+  description: string;
+  avatar: string;
+  badge: string;
+  systemPromptModifier: string;
 }
 
 interface Interview {
@@ -54,6 +75,7 @@ interface AgentProps {
   feedbackId?: string;
   type: "generate" | "interview";
   questions?: string[];
+  personaId?: InterviewerPersonaId;
 }
 
 interface RouteParams {
