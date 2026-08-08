@@ -10,6 +10,8 @@ const monaSans = Mona_Sans({
 
 
 
+import RobotCompanion from "@/components/RobotCompanion";
+
 export const metadata: Metadata = {
   title: "PrepYou",
   description: "An AI-powered platform for preparing for mock interviews.",
@@ -23,10 +25,11 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${monaSans.className} antialiased fancy-bg`}
+        className={`${monaSans.className} antialiased fancy-bg min-h-screen relative`}
         suppressHydrationWarning
       >
         {children}
+        <RobotCompanion />
         <Toaster />
       </body>
     </html>

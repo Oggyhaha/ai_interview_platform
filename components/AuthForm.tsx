@@ -91,44 +91,65 @@ const AuthForm = ({ type }: { type: FormType }) => {
   const isSignIn = type === 'sign-in';
 
   return (
-    <div className="card-border lg:min-w-[566px]">
-      <div className="flex flex-col gap-6 card py-14 px-10">
-        <div className="flex flex-row gap-2 justify-center items-center">
-          <Image src="/logo.svg" alt="logo" height={32} width={38}/>
-          <h2 className="logo-text">PrepYou</h2>
+    <div className="card-border lg:min-w-[520px] shadow-[0_20px_50px_rgba(137,2,62,0.12)] transition-all hover:shadow-[0_25px_60px_rgba(137,2,62,0.18)]">
+      <div className="flex flex-col gap-6 card py-12 px-8 sm:px-12 backdrop-blur-xl bg-white/90 border border-white/80 rounded-3xl relative overflow-hidden">
+        {/* Glow Accent */}
+        <div className="absolute top-0 right-0 w-32 h-32 bg-[#89023E]/5 rounded-full blur-2xl pointer-events-none" />
+
+        <div className="flex flex-col gap-2 justify-center items-center text-center">
+          <div className="relative w-16 h-16 mb-2 animate-float">
+            <Image src="/robot.png" alt="logo" fill className="object-contain drop-shadow-md" priority />
+          </div>
+          <h2 className="logo-text text-4xl">PrepYou</h2>
+          <p className="text-stone-500 text-xs font-medium">Practice real voice interviews powered by AI</p>
         </div>
 
-         <h3>Practice job interview with AI</h3>
+        <h3 className="text-xl font-bold text-center text-stone-800">
+          {isSignIn ? "Welcome Back to PrepYou" : "Create Your PrepYou Account"}
+        </h3>
 
-              <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="w-full space-y-6 mt-4 form">
-          {!isSignIn && (
-            <FormField control={form.control} 
-            name="name" 
-            label="Name" 
-            placeholder="Your Name" /> 
-          )}
-          <FormField control={form.control} 
-            name="email" 
-            label="Email" 
-            placeholder="Your email address"
-            type="email" />
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="w-full space-y-5 mt-2 form">
+            {!isSignIn && (
+              <FormField
+                control={form.control}
+                name="name"
+                label="Full Name"
+                placeholder="Enter your name"
+              />
+            )}
+            <FormField
+              control={form.control}
+              name="email"
+              label="Email Address"
+              placeholder="name@example.com"
+              type="email"
+            />
+            <FormField
+              control={form.control}
+              name="password"
+              label="Password"
+              placeholder="••••••••"
+              type="password"
+            />
 
-          <FormField control={form.control} 
-            name="password" 
-            label="Password" 
-            placeholder="Enter your password"
-            type="password" />
+            <Button className="btn shadow-lg shadow-[#89023E]/20" type="submit">
+              {isSignIn ? "Sign In" : "Create Account"}
+            </Button>
+          </form>
+        </Form>
 
-          <Button className="btn" type="submit">{isSignIn ? 'Sign in' : 'Create an Account'}</Button>
-        </form>
-      </Form>
-        <p className="text-center">
-          {isSignIn ? 'No account yet?' : 'Have an account already'}
-          <Link href={!isSignIn ? '/sign-in' : '/sign-up'} className="font-bold text-user-primary ml-1">{!isSignIn ? "Sign in" : 'Sign up'}</Link>
+        <p className="text-center text-sm text-stone-600 mt-2">
+          {isSignIn ? "Don't have an account yet?" : "Already have an account?"}
+          <Link
+            href={!isSignIn ? "/sign-in" : "/sign-up"}
+            className="font-bold text-[#89023E] hover:underline ml-1.5"
+          >
+            {!isSignIn ? "Sign In" : "Sign Up"}
+          </Link>
         </p>
       </div>
-      </div>
-  )
-}
-export default AuthForm
+    </div>
+  );
+};
+export default AuthForm;
