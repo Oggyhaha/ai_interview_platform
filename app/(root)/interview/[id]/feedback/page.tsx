@@ -10,13 +10,16 @@ import {
 import { Button } from "@/components/ui/button";
 import { getCurrentUser } from "@/lib/actions/auth.action";
 
+import SkillRadarChart from "@/components/SkillRadarChart";
+import SpeechAnalyticsCard from "@/components/SpeechAnalyticsCard";
+
 const Feedback = async ({ params }: RouteParams) => {
   const { id } = await params;
   const user = await getCurrentUser();
 
   const interview = await getInterviewById(id);
   if (!interview) redirect("/");
- 
+
   const feedback = await getFeedbackByInterviewId({
     interviewId: id,
     userId: user?.id!,
@@ -25,29 +28,31 @@ const Feedback = async ({ params }: RouteParams) => {
   return (
     <section className="section-feedback">
       <div className="flex flex-row justify-center">
-        <h1 className="text-4xl font-semibold">
+        <h1 className="text-4xl font-bold text-stone-900">
           Feedback on the Interview -{" "}
-          <span className="capitalize">{interview.role}</span> Interview
+          <span className="capitalize text-[#89023E]">{interview.role}</span> Interview
         </h1>
       </div>
 
-      <div className="flex flex-row justify-center ">
-        <div className="flex flex-row gap-5">
+      <div className="flex flex-row justify-center">
+        <div className="flex flex-row gap-5 items-center bg-white/80 backdrop-blur-md px-6 py-3 rounded-full border border-stone-100 shadow-sm">
           {/* Overall Impression */}
           <div className="flex flex-row gap-2 items-center">
             <Image src="/star.svg" width={22} height={22} alt="star" />
-            <p>
-              Overall Impression:{" "}
-              <span className="text-primary-200 font-bold">
+            <p className="text-sm font-semibold">
+              Overall Score:{" "}
+              <span className="text-[#89023E] font-extrabold text-lg">
                 {feedback?.totalScore}
               </span>
               /100
             </p>
           </div>
 
+          <div className="h-4 w-px bg-stone-300" />
+
           {/* Date */}
-          <div className="flex flex-row gap-2">
-            <Image src="/calendar.svg" width={22} height={22} alt="calendar" />
+          <div className="flex flex-row gap-2 items-center text-sm font-medium text-stone-600">
+            <Image src="/calendar.svg" width={20} height={20} alt="calendar" />
             <p>
               {feedback?.createdAt
                 ? dayjs(feedback.createdAt).format("MMM D, YYYY h:mm A")
@@ -56,6 +61,15 @@ const Feedback = async ({ params }: RouteParams) => {
           </div>
         </div>
       </div>
+
+      {/* Skill Radar Chart & Placement Readiness Rating */}
+      <SkillRadarChart
+        radar={feedback?.skillRadar}
+        readinessScore={feedback?.readinessScore || Math.round((feedback?.totalScore || 75) * 0.95)}
+      />
+
+      {/* Speech & Verbal Communication Metrics */}
+      <SpeechAnalyticsCard metrics={feedback?.speechMetrics} />
 
       <hr />
 

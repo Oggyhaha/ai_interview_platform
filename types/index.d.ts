@@ -6,10 +6,26 @@ interface QuestionEvaluation {
   suggestion: string;
 }
 
+export interface SpeechMetrics {
+  wpm: number;
+  fillerWordCount: number;
+  fillerWordsFound: string[];
+  clarityScore: number;
+}
+
+export interface SkillRadar {
+  technical: number;
+  problemSolving: number;
+  communication: number;
+  architecture: number;
+  systemDesign: number;
+}
+
 interface Feedback {
   id: string;
   interviewId: string;
   totalScore: number;
+  readinessScore?: number;
   categoryScores: Array<{
     name: string;
     score: number;
@@ -19,6 +35,8 @@ interface Feedback {
   areasForImprovement: string[];
   finalAssessment: string;
   questionEvaluations?: QuestionEvaluation[];
+  speechMetrics?: SpeechMetrics;
+  skillRadar?: SkillRadar;
   createdAt: string;
 }
 

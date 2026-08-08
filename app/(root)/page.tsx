@@ -4,6 +4,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import InteractiveInterviewGrid from "@/components/InteractiveInterviewGrid";
 import JobDescriptionParser from "@/components/JobDescriptionParser";
+import RAGKnowledgeBankSelector from "@/components/RAGKnowledgeBankSelector";
 import { getInterviewCover } from "@/lib/utils";
 
 import { getCurrentUser } from "@/lib/actions/auth.action";
@@ -105,6 +106,9 @@ async function Home() {
 
       {/* 1-Click Job Description / Resume Parser AI Component */}
       <JobDescriptionParser userId={user?.id} />
+
+      {/* RAG Vector Knowledge Base (Corporate Question Banks) */}
+      <RAGKnowledgeBankSelector userId={user?.id} />
 
       {/* 3D Block Container 1: Saved Generated Interviews */}
       <section className="card-3d-block flex flex-col gap-6">

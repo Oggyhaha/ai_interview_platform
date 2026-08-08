@@ -9,6 +9,8 @@ import { vapi } from "@/lib/vapi.sdk";
 import { interviewer, INTERVIEWER_PERSONAS } from "@/constants";
 import { createFeedback } from "@/lib/actions/general.action";
 import { InterviewerPersonaId } from "@/types";
+import CodeWorkspace from "@/components/CodeWorkspace";
+import { Code2 } from "lucide-react";
 
 enum CallStatus {
   INACTIVE = "INACTIVE",
@@ -37,6 +39,7 @@ const Agent = ({
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [latestMessage, setLatestMessage] = useState<string>("");
   const [activePersona, setActivePersona] = useState<InterviewerPersonaId>(personaId);
+  const [showCodeWorkspace, setShowCodeWorkspace] = useState(false);
 
   const selectedPersonaObj = INTERVIEWER_PERSONAS.find((p) => p.id === activePersona) || INTERVIEWER_PERSONAS[0];
 
@@ -303,29 +306,49 @@ const Agent = ({
         </div>
       )}
 
-      <div className="w-full flex justify-center">
-        {callStatus !== "ACTIVE" ? (
-          <button
-            className="relative btn-call"
-            disabled={!userId || callStatus === "CONNECTING"}
-            onClick={handleCall}
-          >            <span
-              className={cn(
-                "absolute animate-ping rounded-full opacity-75",
-                callStatus !== "CONNECTING" && "hidden"
-              )}
-            />
+      <div className="w-full flex flex-col items-center gap-4">
+        <div className="flex items-center gap-3">
+          {callStatus !== "ACTIVE" ? (
+            <button
+              className="relative btn-call"
+              disabled={!userId || callStatus === "CONNECTING"}
+              onClick={handleCall}
+            >
+              <span
+                className={cn(
+                  "absolute animate-ping rounded-full opacity-75",
+                  callStatus !== "CONNECTING" && "hidden"
+                )}
+              />
 
-            <span className="relative">
-              {callStatus === "INACTIVE" || callStatus === "FINISHED"
-                ? "Call"
-                : ". . ."}
-            </span>
+              <span className="relative">
+                {callStatus === "INACTIVE" || callStatus === "FINISHED"
+                  ? "Call"
+                  : "Connecting..."}
+              </span>
+            </button>
+          ) : (
+            <button
+              className="btn-disconnect"
+              onClick={handleDisconnect}
+            >
+              End Call
+            </button>
+          )}
+
+          <button
+            onClick={() => setShowCodeWorkspace(!showCodeWorkspace)}
+            className="px-4 py-3 bg-stone-900 text-stone-100 hover:bg-stone-800 rounded-full font-bold text-xs flex items-center gap-2 border border-stone-700 shadow-md transition-all active:scale-95"
+          >
+            <Code2 className="w-4 h-4 text-[#89023E]" />
+            <span>{showCodeWorkspace ? "Hide Scratchpad" : "Live Code & Notes Scratchpad"}</span>
           </button>
-        ) : (
-          <button className="btn-disconnect" onClick={() => handleDisconnect()}>
-            End
-          </button>
+        </div>
+
+        {showCodeWorkspace && (
+          <div className="w-full mt-4 animate-fadeIn">
+            <CodeWorkspace />
+          </div>
         )}
       </div>
     </>
