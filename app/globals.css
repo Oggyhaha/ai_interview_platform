@@ -254,11 +254,15 @@
   }
 
   .card-interview {
-    @apply bg-white/90 backdrop-blur-md shadow-md border border-stone-100/70 rounded-3xl min-h-full flex flex-col p-6 relative overflow-hidden gap-10 justify-between transition-all duration-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.05)] hover:-translate-y-1;
+    @apply bg-white/90 backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.03)] border border-stone-100/70 rounded-3xl min-h-full flex flex-col p-6 relative overflow-hidden gap-10 justify-between transition-all duration-300 hover:shadow-[0_20px_40px_rgba(137,2,62,0.12)] hover:-translate-y-2 hover:rotate-1;
 
     .badge-text {
       @apply text-sm font-semibold capitalize text-[#89023E] bg-[#89023E]/5 border border-[#89023E]/10 px-3 py-1 rounded-full;
     }
+  }
+
+  .card-3d-block {
+    @apply bg-white/80 backdrop-blur-md rounded-3xl p-8 border border-white/60 shadow-[0_15px_35px_rgba(0,0,0,0.03)] transition-all duration-500 hover:shadow-[0_25px_50px_rgba(137,2,62,0.08)];
   }
 }
 
@@ -266,9 +270,9 @@
 @utility fancy-bg {
   background-color: #FAF9F8;
   background-image: 
-    radial-gradient(circle at 10% 20%, rgba(137, 2, 62, 0.03) 0%, transparent 40%),
-    radial-gradient(circle at 90% 10%, rgba(199, 0, 57, 0.02) 0%, transparent 40%),
-    radial-gradient(circle at 50% 85%, rgba(137, 2, 62, 0.02) 0%, transparent 40%);
+    radial-gradient(circle at 10% 20%, rgba(137, 2, 62, 0.04) 0%, transparent 45%),
+    radial-gradient(circle at 90% 10%, rgba(199, 0, 57, 0.03) 0%, transparent 45%),
+    radial-gradient(circle at 50% 85%, rgba(137, 2, 62, 0.03) 0%, transparent 45%);
   background-attachment: fixed;
 }
 
@@ -278,6 +282,19 @@
 
 @utility animate-fadeIn {
   animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@utility animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(2deg);
+  }
 }
 
 @keyframes fadeIn {

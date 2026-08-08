@@ -60,7 +60,16 @@ async function generateFeedbackWithFallback(prompt: string, system: string) {
   ], // Array of exactly 5 category scores
   "strengths": ["string"],
   "areasForImprovement": ["string"],
-  "finalAssessment": "detailed string paragraph summarizing performance"
+  "finalAssessment": "detailed string paragraph summarizing performance",
+  "questionEvaluations": [
+    {
+      "question": "The question asked by interviewer",
+      "candidateAnswer": "Brief summary of how the candidate answered",
+      "score": number (0-100),
+      "modelAnswer": "Comprehensive ideal model answer a top candidate should give",
+      "suggestion": "Actionable suggestion to improve answer"
+    }
+  ]
 }`
               },
               { role: "user", content: prompt }
@@ -130,12 +139,14 @@ You are an AI interviewer analyzing a mock interview. Your task is to evaluate t
 Transcript:
 ${formattedTranscript}
 
-Please score the candidate from 0 to 100 in the following areas. Do not add categories other than the ones provided:
+Please score the candidate from 0 to 100 in the following areas:
 - **Communication Skills**: Clarity, articulation, structured responses.
 - **Technical Knowledge**: Understanding of key concepts for the role.
 - **Problem-Solving**: Ability to analyze problems and propose solutions.
 - **Cultural & Role Fit**: Alignment with company values and job role.
 - **Confidence & Clarity**: Confidence in responses, engagement, and clarity.
+
+For each question identified in the transcript, generate a detailed evaluation item under 'questionEvaluations' including the question, a summary of what the candidate answered, a score out of 100, the ideal 'modelAnswer' (a top senior engineer response), and a concrete 'suggestion'.
     `;
 
     const system =
@@ -151,6 +162,7 @@ Please score the candidate from 0 to 100 in the following areas. Do not add cate
       strengths: object.strengths,
       areasForImprovement: object.areasForImprovement,
       finalAssessment: object.finalAssessment,
+      questionEvaluations: object.questionEvaluations || [],
       createdAt: new Date().toISOString(),
     };
 

@@ -97,6 +97,36 @@ export const mappings = {
   "aws amplify": "amplify",
 };
 
+export const INTERVIEWER_PERSONAS = [
+  {
+    id: "supportive",
+    name: "Sarah Jenkins",
+    title: "Supportive Tech Mentor",
+    description: "Encouraging, patient, and gives gentle hints when you stumble.",
+    avatar: "/ai-avatar.png",
+    badge: "Mentorship Mode",
+    systemPromptModifier: `STYLE & PERSONA: You are a warm, supportive mentor. Be encouraging, patient, and friendly. If the candidate hesitates or gives a short response, give a small encouraging hint or prompt. Keep responses friendly and concise.`,
+  },
+  {
+    id: "faang",
+    name: "Alex Vance",
+    title: "FAANG Staff Architect",
+    description: "Strict, highly technical, probes edge cases, performance, & scale.",
+    avatar: "/ai-avatar.png",
+    badge: "FAANG Probing",
+    systemPromptModifier: `STYLE & PERSONA: You are a senior Staff Architect at a top tech company (FAANG style). Be professional, highly technical, and probing. Ask about edge cases, scaling limits, trade-offs, and design choices. Maintain high standards while remaining professional and concise.`,
+  },
+  {
+    id: "startup",
+    name: "Marcus Chen",
+    title: "Startup Founder & CTO",
+    description: "Rapid-fire, high energy, evaluates speed, agility, & execution.",
+    avatar: "/ai-avatar.png",
+    badge: "Fast-Paced Startup",
+    systemPromptModifier: `STYLE & PERSONA: You are a fast-moving YC startup founder & CTO. Be energetic, direct, and focused on execution speed, adaptability, and pragmatic problem solving. Keep responses quick, energetic, and concise.`,
+  },
+] as const;
+
 export const interviewer: CreateAssistantDTO = {
   name: "Interviewer",
   firstMessage:
@@ -154,6 +184,15 @@ export const feedbackSchema = z.object({
   strengths: z.array(z.string()),
   areasForImprovement: z.array(z.string()),
   finalAssessment: z.string(),
+  questionEvaluations: z.array(
+    z.object({
+      question: z.string().describe("The interview question that was asked"),
+      candidateAnswer: z.string().describe("Brief summary of what the candidate answered"),
+      score: z.number().describe("Score for this specific answer out of 100"),
+      modelAnswer: z.string().describe("Ideal model answer a senior engineer/candidate would provide"),
+      suggestion: z.string().describe("Specific tip to improve this exact answer"),
+    })
+  ).optional().describe("Question-by-question model answer breakdown"),
 });
 
 export const interviewCovers = [

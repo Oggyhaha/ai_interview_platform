@@ -6,8 +6,9 @@ import { useRouter } from "next/navigation";
 
 import { cn } from "@/lib/utils";
 import { vapi } from "@/lib/vapi.sdk";
-import { interviewer } from "@/constants";
+import { interviewer, INTERVIEWER_PERSONAS } from "@/constants";
 import { createFeedback } from "@/lib/actions/general.action";
+import { InterviewerPersonaId } from "@/types";
 
 enum CallStatus {
   INACTIVE = "INACTIVE",
@@ -28,12 +29,16 @@ const Agent = ({
   feedbackId,
   type,
   questions,
+  personaId = "supportive",
 }: AgentProps) => {
   const router = useRouter();
   const [callStatus, setCallStatus] = useState<CallStatus>(CallStatus.INACTIVE);
   const [messages, setMessages] = useState<SavedMessage[]>([]);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [latestMessage, setLatestMessage] = useState<string>("");
+  const [activePersona, setActivePersona] = useState<InterviewerPersonaId>(personaId);
+
+  const selectedPersonaObj = INTERVIEWER_PERSONAS.find((p) => p.id === activePersona) || INTERVIEWER_PERSONAS[0];
 
   useEffect(() => {
     const onCallStart = () => {
@@ -185,13 +190,14 @@ const Agent = ({
           .join("\n");
       }
 
-      // Manually inject questions since variableValues is ignored for inline assistant objects
+      // Manually inject questions & persona style into assistant content
       const customInterviewer = JSON.parse(JSON.stringify(interviewer));
       if (customInterviewer.model?.messages?.[0]?.content) {
-        customInterviewer.model.messages[0].content = customInterviewer.model.messages[0].content.replace(
-          "{{questions}}",
-          formattedQuestions
-        );
+        customInterviewer.model.messages[0].content = `${selectedPersonaObj.systemPromptModifier}\n\n` + 
+          customInterviewer.model.messages[0].content.replace(
+            "{{questions}}",
+            formattedQuestions
+          );
       }
       await vapi.start(customInterviewer);
     }
@@ -205,6 +211,48 @@ const Agent = ({
 
   return (
     <>
+      {type === "interview" && callStatus === "INACTIVE" && (
+        <div className="w-full bg-white/90 backdrop-blur-md p-6 rounded-3xl border border-stone-100 shadow-sm mb-6 flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <h4 className="text-lg font-bold text-stone-900">Select Interviewer Persona</h4>
+            <span className="text-xs font-semibold px-3 py-1 bg-[#89023E]/10 text-[#89023E] rounded-full">
+              {selectedPersonaObj.badge}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {INTERVIEWER_PERSONAS.map((persona) => {
+              const isSelected = persona.id === activePersona;
+              return (
+                <div
+                  key={persona.id}
+                  onClick={() => setActivePersona(persona.id as InterviewerPersonaId)}
+                  className={cn(
+                    "p-4 rounded-2xl border transition-all cursor-pointer flex flex-col gap-2 relative",
+                    isSelected
+                      ? "border-[#89023E] bg-[#89023E]/5 shadow-sm"
+                      : "border-stone-200 hover:border-stone-300 bg-white"
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="size-10 rounded-full bg-stone-100 flex items-center justify-center font-bold text-[#89023E]">
+                      {persona.name.charAt(0)}
+                    </div>
+                    <div>
+                      <h5 className="font-bold text-sm text-stone-900">{persona.name}</h5>
+                      <p className="text-xs text-stone-500 font-medium">{persona.title}</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-stone-600 mt-1 leading-relaxed">
+                    {persona.description}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       <div className="call-view">
         {/* AI Interviewer Card */}
         <div className="card-interviewer">
@@ -218,7 +266,10 @@ const Agent = ({
             />
             {isSpeaking && <span className="animate-speak" />}
           </div>
-          <h3>AI Interviewer</h3>
+          <h3>{type === "interview" ? selectedPersonaObj.name : "AI Setup Agent"}</h3>
+          <p className="text-xs text-stone-500 font-medium">
+            {type === "interview" ? selectedPersonaObj.title : "Voice Assistant"}
+          </p>
         </div>
 
         {/* User Profile Card */}
